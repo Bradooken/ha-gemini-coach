@@ -67,7 +67,7 @@ shell_command:
 ### Step 3: Import the Blueprint
 Click the button below to import this blueprint directly into your Home Assistant instance.
 
-[![Open your Home Assistant instance and show the blueprint import dialog.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/YOUR_USERNAME/YOUR_REPO/blob/main/gemini_health_coach.yaml)
+[![Open your Home Assistant instance and show the blueprint import dialog.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bradooken/ha-gemini-coach/blob/main/gemini_health_coach.yaml)
 
 *(Or copy the `gemini_health_coach.yaml` file to your `/config/blueprints/automation/` folder manually).*
 
