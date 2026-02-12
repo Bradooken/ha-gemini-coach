@@ -110,41 +110,31 @@ action:
       focus_mode: "{{ sport_focus }}"
       style: "{{ notification_style }}"
       
-      mood_prompt: >-
-        {% if sleep_val > 80 and energy_val > 80 %}
-          energetic, vibrant, triumphant atmosphere, golden hour lighting.
-        {% elif sleep_val < 55 or energy_val < 40 %}
-          moody, atmospheric, overcast, dramatic cinematic lighting.
-        {% else %}
-          calm, balanced, steady, clear daylight.
-        {% endif %}
-      
-      final_prompt: "A {{ focus_mode }} scene. {{ mood_prompt }}"
+      final_prompt: "A {{ focus_mode }} scene. Biometrics: Sleep {{ sleep_val }}, Energy {{ energy_val }}."
 
   - service: shell_command.generate_gemini_image
     data:
       prompt: "{{ final_prompt }}"
       api_key: "{{ api_key }}"
 
-  - parallel:
-      - delay: "00:00:15"
-      - service: conversation.process
-        data:
-          agent_id: conversation.google_ai_conversation
-          text: >
-            You are an elite Coach. Review these daily metrics: Sleep: {{ sleep_val }}/100, Energy: {{ energy_val }}/100. Provide a recovery assessment and one tip for {{ focus_mode }}. Under 60 words.
-        response_variable: gemini_response
+  # We use a sequence here so the variable is available to the setter
+  - service: conversation.process
+    data:
+      agent_id: conversation.google_ai_conversation
+      text: >
+        You are an elite Coach. Review these metrics: Sleep: {{ sleep_val }}/100, Energy: {{ energy_val }}/100. 
+        Provide a recovery assessment and one tip for {{ focus_mode }}. Under 60 words.
+    response_variable: gemini_response
 
-  # ALWAYS save the report to the Helper (for the Dashboard)
+  # Save the report to the Helper IMMEDIATELY after getting the response
   - service: input_text.set_value
     target:
       entity_id: !input report_helper
     data:
       value: "{{ gemini_response.response.speech.plain.speech }}"
 
-  # Send Notification based on chosen Style
+  # Now handle notifications
   - choose:
-      # OPTION 1: Mobile App
       - conditions: "{{ style == 'Mobile App' }}"
         sequence:
           - domain: mobile_app
@@ -156,7 +146,6 @@ action:
               image: "/local/daily_briefing_img.jpg?t={{ now().timestamp() | int }}"
               clickAction: "{{ dashboard_path }}"
       
-      # OPTION 2: Email
       - conditions: "{{ style == 'Email' }}"
         sequence:
           - service: !input email_service
