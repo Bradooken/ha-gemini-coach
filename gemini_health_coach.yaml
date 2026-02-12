@@ -28,7 +28,7 @@ blueprint:
     3.  **Google Cloud:** Your API Key must have the **Vertex AI API** enabled (Search "Vertex AI" in Google Cloud Console -> Enable).
     
     [View Full Documentation & Support](https://github.com/bradooken/ha-gemini-coach)
-    
+
   domain: automation
   input:
     gemini_api_key:
