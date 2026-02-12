@@ -1,6 +1,6 @@
 blueprint:
   name: "Gemini Morning Health Coach & Image Generator"
-description: |
+  description: |
     ## 🤖 Gemini AI Morning Health Coach
     
     **Turn your Garmin stats into a personalized AI morning briefing.**
