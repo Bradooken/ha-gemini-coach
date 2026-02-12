@@ -92,14 +92,11 @@ Click the button below to import this blueprint directly into your Home Assistan
 
 | Option | Description |
 | :--- | :--- |
-| **Google Gemini API Key** | Your Google Cloud API Key (must have Vertex AI enabled). |
-| **Notification Style** | Choose between Mobile App (Simple) or Email (Rich HTML). |
-| **Notification Service** | The service to send the message (e.g., notify.mobile_app_iphone or notify.gmail). |
-| **Sleep Sensor** | Your sleep score sensor (0-100). Works with Garmin, Oura, Whoop, etc. |
-| **Energy Sensor** | Your Body Battery or Recovery score sensor (0-100). |
-| **Sport Focus** | An `input_select` helper containing your sports (e.g., "Running", "Cycling"). |
-| **Email Service** | The service to send the email (e.g., notify.gmail). Must be an email integration. |
-| **Next Alarm Sensor** | (Optional) The automation triggers 5 minutes after this alarm time. |
+| **Notification Style** | Choose between **Mobile App** (Fast) or **Email** (Detailed). |
+| **Mobile Device** | (If Mobile App) The device to receive the push notification. |
+| **Email Service** | (If Email) The service name (e.g., `notify.gmail`). |
+| **Report Helper** | The `input_text` entity used to store the report for your dashboard. |
+| **Sport Focus** | Select your primary sport for tailored tips and images. |
 
 ---
 
