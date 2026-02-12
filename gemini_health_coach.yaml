@@ -5,41 +5,23 @@ blueprint:
     
     **Turn your Garmin stats into a personalized AI morning briefing.**
     
-    This blueprint uses **Google Gemini** (for coaching tips) and **Imagen 3** (for visuals) to generate a unique report based on your Sleep & Body Battery scores.
+    ### ⚠️ Prerequisites
+    1.  **Python Script:** Place `gemini_image.py` in your `/config` folder.
+    2.  **Helper:** Create a **Text Helper** (Settings > Devices > Helpers > Create Helper > Text) named `Morning Report`.
+    3.  **Shell Command:** Add `generate_gemini_image` to `configuration.yaml`.
     
-    ### ✨ Key Features
-    * 🎨 **Dynamic Visuals:** Generates a custom 16:9 image based on your "Vibe" (Energy levels) and Sport.
-    * 🏃‍♂️ **AI Coaching:** Provides a specific, technical training tip based on your recovery metrics.
-    * 📱 **Dual Mode:** Choose between a rich **HTML Email** or a **Mobile App** push notification.
-    
-    ---
-    
-    ### ⚠️ Critical Setup Steps
-    **This blueprint requires manual setup to work.**
-    
-    1.  **Download Script:** You must place `gemini_image.py` in your `/config` folder.
-    2.  **Edit Config:** Add the following line to `configuration.yaml` and restart HA:
-    
-    ```yaml
-    shell_command:
-      generate_gemini_image: 'python3 /config/gemini_image.py "{{ prompt }}" "{{ api_key }}"'
-    ```
-    
-    3.  **Google Cloud:** Your API Key must have the **Vertex AI API** enabled (Search "Vertex AI" in Google Cloud Console -> Enable).
-    
-    [View Full Documentation & Support](https://github.com/bradooken/ha-gemini-coach)
+    [View Setup Guide](https://github.com/bradooken/ha-gemini-coach)
 
   domain: automation
   input:
     gemini_api_key:
       name: Google Gemini API Key
-      description: Your API Key from Google Cloud (must have Vertex AI enabled).
       selector:
         text:
           type: password
     notification_style:
       name: Notification Style
-      description: Choose how you want to receive the briefing.
+      description: "Choose 'Mobile App' for a quick push or 'Email' for the full HTML report."
       selector:
         select:
           options:
@@ -49,7 +31,7 @@ blueprint:
       default: Mobile App
     notify_device:
       name: Mobile Device (App Notification)
-      description: Required if Style is 'Mobile App'. Select the device to receive the notification.
+      description: Required if Style is 'Mobile App'.
       default: ""
       selector:
         device:
@@ -57,50 +39,52 @@ blueprint:
           multiple: false
     email_service:
       name: Email Service (Email Notification)
-      description: Required if Style is 'Email'. The service to use (e.g., notify.gmail).
+      description: Required if Style is 'Email' (e.g., notify.gmail).
       default: notify.gmail
+      selector:
+        text:
+    report_helper:
+      name: Report Text Helper
+      description: Select the Text helper used to store the report for your dashboard.
+      selector:
+        entity:
+          domain: input_text
+    dashboard_path:
+      name: Dashboard Path
+      default: "/health-report"
       selector:
         text:
     sport_focus:
       name: Sport Focus
-      description: Choose your primary sport for the coaching tip and image subject.
       selector:
         select:
-          options:
-            - Triathlon
-            - Running
-            - Cycling
-            - Swimming
-            - General Fitness
-            - Yoga
+          options: [Triathlon, Running, Cycling, Swimming, Yoga, General Fitness]
           mode: dropdown
     sleep_sensor:
       name: Sleep Score Sensor
-      description: Your Sleep Score sensor (0-100).
       selector:
         entity:
           domain: sensor
     body_battery_sensor:
-      name: Body Battery / Energy Sensor
-      description: Your Body Battery or Recovery Score sensor (0-100).
+      name: Body Battery Sensor
       selector:
         entity:
           domain: sensor
     alarm_sensor:
-      name: Next Alarm Sensor (Trigger)
-      description: The automation will run 5 minutes after this alarm goes off.
+      name: Next Alarm Sensor
       selector:
         entity:
           domain: sensor
           device_class: timestamp
 
 variables:
-  # Map inputs to variables so they can be used in templates
   sleep_sensor: !input sleep_sensor
   body_battery_sensor: !input body_battery_sensor
   alarm_sensor: !input alarm_sensor
   sport_focus: !input sport_focus
+  report_helper: !input report_helper
   notification_style: !input notification_style
+  dashboard_path: !input dashboard_path
 
 trigger:
   - platform: template
@@ -121,37 +105,21 @@ condition:
 action:
   - variables:
       api_key: !input gemini_api_key
-      style: "{{ notification_style }}"
       sleep_val: "{{ states(sleep_sensor) | int(default=60) }}"
       energy_val: "{{ states(body_battery_sensor) | int(default=50) }}"
       focus_mode: "{{ sport_focus }}"
+      style: "{{ notification_style }}"
       
       mood_prompt: >-
         {% if sleep_val > 80 and energy_val > 80 %}
-          energetic, vibrant, triumphant atmosphere, golden hour lighting, feeling of peak performance, highly detailed.
+          energetic, vibrant, triumphant atmosphere, golden hour lighting.
         {% elif sleep_val < 55 or energy_val < 40 %}
-          moody, atmospheric, overcast, dramatic cinematic lighting, grit and determination, storm clouds.
+          moody, atmospheric, overcast, dramatic cinematic lighting.
         {% else %}
-          calm, balanced, steady, clear daylight, professional photography style, soft focus.
+          calm, balanced, steady, clear daylight.
         {% endif %}
       
-      activity_prompt: >-
-        {% if focus_mode == 'Triathlon' %}
-          A triathlete running towards a bicycle in a transition area, wearing a professional triathlon suit.
-        {% elif focus_mode == 'Running' %}
-          A runner on a scenic mountain trail ridge.
-        {% elif focus_mode == 'Swimming' %}
-          A swimmer breaking the surface of the water, water droplets in air.
-        {% elif focus_mode == 'Cycling' %}
-          A road cyclist climbing a steep winding road.
-        {% elif focus_mode == 'Yoga' %}
-          A person practicing yoga in a serene studio with natural light.
-        {% else %}
-          A person stretching in a modern, peaceful studio with large windows.
-        {% endif %}
-      
-      final_prompt: >-
-        {{ (activity_prompt ~ " " ~ mood_prompt) | replace('\n', ' ') | replace('"', '') | trim }}
+      final_prompt: "A {{ focus_mode }} scene. {{ mood_prompt }}"
 
   - service: shell_command.generate_gemini_image
     data:
@@ -164,26 +132,31 @@ action:
         data:
           agent_id: conversation.google_ai_conversation
           text: >
-            You are an elite Coach. Review these daily metrics:
-            - Sleep: {{ sleep_val }}/100 
-            - Energy: {{ energy_val }}/100 
-            
-            Provide a brief recovery assessment and one specific tip for {{ focus_mode }}.
-            Keep it under 60 words. Be motivating but realistic.
+            You are an elite Coach. Review these daily metrics: Sleep: {{ sleep_val }}/100, Energy: {{ energy_val }}/100. Provide a recovery assessment and one tip for {{ focus_mode }}. Under 60 words.
         response_variable: gemini_response
 
+  # ALWAYS save the report to the Helper (for the Dashboard)
+  - service: input_text.set_value
+    target:
+      entity_id: !input report_helper
+    data:
+      value: "{{ gemini_response.response.speech.plain.speech }}"
+
+  # Send Notification based on chosen Style
   - choose:
+      # OPTION 1: Mobile App
       - conditions: "{{ style == 'Mobile App' }}"
         sequence:
           - domain: mobile_app
             type: notify
             device_id: !input notify_device
-            title: "☀️ Morning Brief: {{ focus_mode }}"
-            message: "{{ gemini_response.response.speech.plain.speech }}\n\n💤 Sleep: {{ sleep_val }} | 🔋 Energy: {{ energy_val }}"
+            title: "☀️ Health Report Ready"
+            message: "Your AI coach has reviewed your metrics. Tap to view your briefing."
             data:
               image: "/local/daily_briefing_img.jpg?t={{ now().timestamp() | int }}"
-              clickAction: "/lovelace/home"
+              clickAction: "{{ dashboard_path }}"
       
+      # OPTION 2: Email
       - conditions: "{{ style == 'Email' }}"
         sequence:
           - service: !input email_service
