@@ -1,0 +1,14 @@
+type: markdown
+content: >
+  # 🏃‍♂️ Morning Briefing: {{ now().strftime('%A') }}
+
+  ![Health Image](/local/daily_briefing_img.jpg?t={{ as_timestamp(now()) | int }})
+
+  ### 🤖 Coach's Insight
+  {{ states('input_text.morning_report') }}
+
+  ---
+  **Recovery Metrics**
+
+  * 💤 **Sleep Score:** {{ states('sensor.garmin_connect_sleep_score') }}
+  * 🔋 **Body Battery:** {{ states('sensor.garmin_connect_body_battery_most_recent') }}
