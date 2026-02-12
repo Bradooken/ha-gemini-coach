@@ -1,7 +1,7 @@
 # 🤖 Gemini AI Morning Health Coach & Image Generator
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Donate-FFDD00.svg?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/bradooken)
-[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Blueprint-blue.svg?style=for-the-badge&logo=home-assistant)](https://www.home-assistant.io/)
+[![Home Assistant](https://img.shields.io/badge/Home%20Assistant-Blueprint-blue.svg?style=for-the-badge&logo=home-assistant)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bradooken/ha-gemini-coach/blob/main/gemini_health_coach.yaml)
 
 Turn your Garmin/Health stats into a personalized, AI-generated morning briefing. 
 
