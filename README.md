@@ -16,6 +16,9 @@ This Blueprint analyzes your sleep and energy data to generate a **custom "Vibe"
 
 * **Dynamic Visuals:** Generates a unique 16:9 header image every morning based on your biometric data (Sleep/Body Battery) and your chosen sport.
 * **AI Coaching:** Uses the Gemini "Coach" persona to review your raw stats and provide a specific, under-60-word technical tip for your workout.
+* **Dual Modes:**
+    * **📱 Mobile App:** Sends a clean push notification with the AI image attached and the coaching tip in the body.
+    * **📧 Email:** Sends a rich HTML email with a newsletter-style layout.
 * **Sport Specific:** Supports modes for Triathlon, Running, Cycling, Swimming, and General Wellness.
 * **Safety Filter Handling:** Includes "Safe" prompt engineering to prevent Google's safety filters from blocking images.
 
@@ -42,6 +45,12 @@ Image generation requires the **Vertex AI API**. Standard "Free Tier" AI Studio 
 2.  Select your project.
 3.  Go to **APIs & Services** and enable the **Vertex AI API**.
 4.  Search for "Vertex AI Model Garden", find **Imagen 4**, and click **Enable**.
+
+### 4. For the Notification (SMTP Email)
+This blueprint uses rich HTML (embedded images, layout) which requires an Email integration. It will not render correctly on the Home Assistant mobile app or Discord.
+1.  Go to **Settings > Devices & Services > Add Integration > SMTP**.
+2.  Enter your email details (e.g., for Gmail, use `smtp.gmail.com`, port `587`, and an [App Password](https://support.google.com/accounts/answer/185833)).
+3.  Name the service `notify.gmail` (or similar).
 
 ---
 
@@ -78,10 +87,12 @@ Click the button below to import this blueprint directly into your Home Assistan
 | Option | Description |
 | :--- | :--- |
 | **Google Gemini API Key** | Your Google Cloud API Key (must have Vertex AI enabled). |
+| **Notification Style** | Choose between Mobile App (Simple) or Email (Rich HTML). |
+| **Notification Service** | The service to send the message (e.g., notify.mobile_app_iphone or notify.gmail). |
 | **Sleep Sensor** | Your sleep score sensor (0-100). Works with Garmin, Oura, Whoop, etc. |
 | **Energy Sensor** | Your Body Battery or Recovery score sensor (0-100). |
 | **Sport Focus** | An `input_select` helper containing your sports (e.g., "Running", "Cycling"). |
-| **Notification Service** | The service to send the email (e.g., `notify.gmail` or `notify.email`). |
+| **Email Service** | The service to send the email (e.g., notify.gmail). Must be an email integration. |
 | **Next Alarm Sensor** | (Optional) The automation triggers 5 minutes after this alarm time. |
 
 ---
