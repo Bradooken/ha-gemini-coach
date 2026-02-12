@@ -3,7 +3,7 @@ blueprint:
   description: >
     ## 🤖 AI-Powered Morning Briefing
     
-    Generates a daily email report using **Google Gemini** for text and **Imagen 3** for visuals.
+    Generates a daily **HTML Email** report using **Google Gemini** for text and **Imagen 3** for visuals.
     
     **Features:**
     * 📊 Analyzes Sleep & Body Battery scores.
@@ -13,7 +13,8 @@ blueprint:
     ### ⚠️ Prerequisites
     1.  **Python Script:** You must download `gemini_image.py` from the repo and place it in `/config`.
     2.  **Shell Command:** You must add the `shell_command` line to your `configuration.yaml`.
-    3.  **Vertex AI:** Your Google Cloud API Key must have the "Vertex AI API" enabled for image generation.
+    3.  **Vertex AI:** Your Google Cloud API Key must have the "Vertex AI API" enabled.
+    4.  **Email Integration:** You must have an email service set up (e.g., SMTP) to receive the HTML report.
     
   domain: automation
   input:
@@ -24,18 +25,26 @@ blueprint:
         text:
           type: password
     
-    notify_service:
+    email_service:
       name: Email Notification Service
-      description: The service to send the email (e.g., notify.gmail).
+      description: The service to send the email (e.g., notify.gmail, notify.email). Must support HTML.
       selector:
         text:
+      default: notify.gmail
     
-    focus_mode_entity:
-      name: Sport/Focus Input
-      description: An Input Select helper containing your sports (Running, Cycling, Triathlon, etc.).
+    sport_focus:
+      name: Sport Focus
+      description: Choose your primary sport for the coaching tip and image subject.
       selector:
-        entity:
-          domain: input_select
+        select:
+          options:
+            - Triathlon
+            - Running
+            - Cycling
+            - Swimming
+            - General Fitness
+            - Yoga
+          mode: dropdown
           
     sleep_sensor:
       name: Sleep Score Sensor
@@ -80,7 +89,7 @@ action:
       api_key: !input gemini_api_key
       sleep_val: "{{ states(inputs.sleep_sensor) | int(default=60) }}"
       energy_val: "{{ states(inputs.body_battery_sensor) | int(default=50) }}"
-      focus_mode: "{{ states(inputs.focus_mode_entity) }}"
+      focus_mode: "!input sport_focus"
       
       # Vibe Logic
       mood_prompt: >-
@@ -102,6 +111,8 @@ action:
           A swimmer breaking the surface of the water, water droplets in air.
         {% elif focus_mode == 'Cycling' %}
           A road cyclist climbing a steep winding road.
+        {% elif focus_mode == 'Yoga' %}
+          A person practicing yoga in a serene studio with natural light.
         {% else %}
           A person stretching in a modern, peaceful studio with large windows.
         {% endif %}
@@ -131,7 +142,7 @@ action:
         response_variable: gemini_response
 
   # Send Email
-  - service: !input notify_service
+  - service: !input email_service
     data:
       title: "💪 Morning Report: {{ focus_mode }}"
       message: HTML required.
