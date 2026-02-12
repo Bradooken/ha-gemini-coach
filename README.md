@@ -52,6 +52,12 @@ This blueprint uses rich HTML (embedded images, layout) which requires an Email 
 2.  Enter your email details (e.g., for Gmail, use `smtp.gmail.com`, port `587`, and an [App Password](https://support.google.com/accounts/answer/185833)).
 3.  Name the service `notify.gmail` (or similar).
 
+### Step 5: Create the Helper and Dashboard
+1. Go to **Settings > Devices & Services > Helpers**.
+2. Click **Create Helper** > **Text**. Name it `Morning Report`.
+3. Create a new Dashboard with the URL `health-report`.
+4. Add a **Markdown Card** and paste the provided dashboard YAML from the repo.
+
 ---
 
 ## 🚀 Installation
