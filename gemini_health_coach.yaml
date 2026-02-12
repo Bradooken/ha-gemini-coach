@@ -1,0 +1,151 @@
+blueprint:
+  name: "Gemini Morning Health Coach & Image Generator"
+  description: >
+    ## 🤖 AI-Powered Morning Briefing
+    
+    Generates a daily email report using **Google Gemini** for text and **Imagen 3** for visuals.
+    
+    **Features:**
+    * 📊 Analyzes Sleep & Body Battery scores.
+    * 🎨 Generates a custom header image based on your "Vibe" (Health stats) and "Focus" (Sport).
+    * 🏃‍♂️ Provides a technical training tip from an "Elite Coach" persona.
+    
+    ### ⚠️ Prerequisites
+    1.  **Python Script:** You must download `gemini_image.py` from the repo and place it in `/config`.
+    2.  **Shell Command:** You must add the `shell_command` line to your `configuration.yaml`.
+    3.  **Vertex AI:** Your Google Cloud API Key must have the "Vertex AI API" enabled for image generation.
+    
+  domain: automation
+  input:
+    gemini_api_key:
+      name: Google Gemini API Key
+      description: Your API Key from Google Cloud (must have Vertex AI enabled).
+      selector:
+        text:
+          type: password
+    
+    notify_service:
+      name: Email Notification Service
+      description: The service to send the email (e.g., notify.gmail).
+      selector:
+        text:
+    
+    focus_mode_entity:
+      name: Sport/Focus Input
+      description: An Input Select helper containing your sports (Running, Cycling, Triathlon, etc.).
+      selector:
+        entity:
+          domain: input_select
+          
+    sleep_sensor:
+      name: Sleep Score Sensor
+      description: Your Sleep Score sensor (0-100).
+      selector:
+        entity:
+          domain: sensor
+          
+    body_battery_sensor:
+      name: Body Battery / Energy Sensor
+      description: Your Body Battery or Recovery Score sensor (0-100).
+      selector:
+        entity:
+          domain: sensor
+    
+    alarm_sensor:
+      name: Next Alarm Sensor (Trigger)
+      description: The automation will run 5 minutes after this alarm goes off.
+      selector:
+        entity:
+          domain: sensor
+          device_class: timestamp
+
+trigger:
+  - platform: template
+    value_template: >-
+      {% set alarm = states(inputs.alarm_sensor) %} 
+      {% if alarm not in ['unavailable', 'unknown'] %}
+        {{ now() >= as_datetime(alarm) + timedelta(minutes=5) }}
+      {% else %}
+        false
+      {% endif %}
+
+condition:
+  - condition: template
+    value_template: >-
+      {{ this.attributes.last_triggered == None or 
+         this.attributes.last_triggered.date() != now().date() }}
+
+action:
+  - variables:
+      api_key: !input gemini_api_key
+      sleep_val: "{{ states(inputs.sleep_sensor) | int(default=60) }}"
+      energy_val: "{{ states(inputs.body_battery_sensor) | int(default=50) }}"
+      focus_mode: "{{ states(inputs.focus_mode_entity) }}"
+      
+      # Vibe Logic
+      mood_prompt: >-
+        {% if sleep_val > 80 and energy_val > 80 %}
+          energetic, vibrant, triumphant atmosphere, golden hour lighting, feeling of peak performance, highly detailed.
+        {% elif sleep_val < 55 or energy_val < 40 %}
+          moody, atmospheric, overcast, dramatic cinematic lighting, grit and determination, storm clouds.
+        {% else %}
+          calm, balanced, steady, clear daylight, professional photography style, soft focus.
+        {% endif %}
+      
+      # Subject Logic
+      activity_prompt: >-
+        {% if focus_mode == 'Triathlon' %}
+          A triathlete running towards a bicycle in a transition area, wearing a professional triathlon suit.
+        {% elif focus_mode == 'Running' %}
+          A runner on a scenic mountain trail ridge.
+        {% elif focus_mode == 'Swimming' %}
+          A swimmer breaking the surface of the water, water droplets in air.
+        {% elif focus_mode == 'Cycling' %}
+          A road cyclist climbing a steep winding road.
+        {% else %}
+          A person stretching in a modern, peaceful studio with large windows.
+        {% endif %}
+      
+      final_prompt: >-
+        {{ (activity_prompt ~ " " ~ mood_prompt) | replace('\n', ' ') | replace('"', '') | trim }}
+
+  # Generate Image
+  - service: shell_command.generate_gemini_image
+    data:
+      prompt: "{{ final_prompt }}"
+      api_key: "{{ api_key }}"
+
+  # Generate Text
+  - parallel:
+      - delay: "00:00:15"
+      - service: conversation.process
+        data:
+          agent_id: conversation.google_ai_conversation
+          text: >
+            You are an elite Coach. Review these daily metrics:
+            - Sleep: {{ sleep_val }}/100 
+            - Energy: {{ energy_val }}/100 
+            
+            Provide a brief recovery assessment and one specific tip for {{ focus_mode }}.
+            Keep it under 60 words. Be motivating but realistic.
+        response_variable: gemini_response
+
+  # Send Email
+  - service: !input notify_service
+    data:
+      title: "💪 Morning Report: {{ focus_mode }}"
+      message: HTML required.
+      data:
+        images:
+          - /config/www/daily_briefing_img.jpg
+        html: |
+          <!DOCTYPE html> <html> <body>
+            <div style="font-family: sans-serif; max-width: 600px; margin: auto;">
+              <img src="cid:daily_briefing_img.jpg" style="width: 100%; border-radius: 12px;">
+              <h2 style="text-align:center;">☀️ {{ now().strftime('%A, %d %B') }}</h2>
+              <div style="background:#f4f4f4; padding:15px; border-radius:8px; margin:15px 0;">
+                <p><strong>Sleep:</strong> {{ sleep_val }} | <strong>Energy:</strong> {{ energy_val }}</p>
+                <p><em>{{ gemini_response.response.speech.plain.speech }}</em></p>
+              </div>
+            </div>
+          </body> </html>
