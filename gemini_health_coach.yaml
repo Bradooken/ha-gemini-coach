@@ -25,7 +25,7 @@ blueprint:
       generate_gemini_image: 'python3 /config/gemini_image.py "{{ prompt }}" "{{ api_key }}"'
     ```
     
-    3.  **Google Cloud:** Your API Key must have the **Vertex AI API** enabled.
+    3.  **Google Cloud:** Your API Key must have the **Vertex AI API** enabled (Search "Vertex AI" in Google Cloud Console -> Enable).
     
     [View Full Documentation & Support](https://github.com/bradooken/ha-gemini-coach)
 
@@ -37,7 +37,6 @@ blueprint:
       selector:
         text:
           type: password
-    
     notification_style:
       name: Notification Style
       description: Choose how you want to receive the briefing.
@@ -48,25 +47,20 @@ blueprint:
             - Email
           mode: dropdown
       default: Mobile App
-
     notify_device:
       name: Mobile Device (App Notification)
-      description: >
-        **Required if Style is 'Mobile App'.** Select the device to receive the notification.
-      default: false
+      description: Required if Style is 'Mobile App'. Select the device to receive the notification.
+      default: ""
       selector:
         device:
           integration: mobile_app
           multiple: false
-
     email_service:
       name: Email Service (Email Notification)
-      description: >
-        **Required if Style is 'Email'.** The service to use (e.g., `notify.gmail`).
+      description: Required if Style is 'Email'. The service to use (e.g., notify.gmail).
       default: notify.gmail
       selector:
         text:
-
     sport_focus:
       name: Sport Focus
       description: Choose your primary sport for the coaching tip and image subject.
@@ -80,21 +74,18 @@ blueprint:
             - General Fitness
             - Yoga
           mode: dropdown
-          
     sleep_sensor:
       name: Sleep Score Sensor
       description: Your Sleep Score sensor (0-100).
       selector:
         entity:
           domain: sensor
-          
     body_battery_sensor:
       name: Body Battery / Energy Sensor
       description: Your Body Battery or Recovery Score sensor (0-100).
       selector:
         entity:
           domain: sensor
-    
     alarm_sensor:
       name: Next Alarm Sensor (Trigger)
       description: The automation will run 5 minutes after this alarm goes off.
@@ -103,10 +94,18 @@ blueprint:
           domain: sensor
           device_class: timestamp
 
+variables:
+  # Map inputs to variables so they can be used in templates
+  sleep_sensor: !input sleep_sensor
+  body_battery_sensor: !input body_battery_sensor
+  alarm_sensor: !input alarm_sensor
+  sport_focus: !input sport_focus
+  notification_style: !input notification_style
+
 trigger:
   - platform: template
     value_template: >-
-      {% set alarm = states(inputs.alarm_sensor) %} 
+      {% set alarm = states(alarm_sensor) %} 
       {% if alarm not in ['unavailable', 'unknown'] %}
         {{ now() >= as_datetime(alarm) + timedelta(minutes=5) }}
       {% else %}
@@ -122,12 +121,11 @@ condition:
 action:
   - variables:
       api_key: !input gemini_api_key
-      style: !input notification_style
-      sleep_val: "{{ states(inputs.sleep_sensor) | int(default=60) }}"
-      energy_val: "{{ states(inputs.body_battery_sensor) | int(default=50) }}"
-      focus_mode: "!input sport_focus"
+      style: "{{ notification_style }}"
+      sleep_val: "{{ states(sleep_sensor) | int(default=60) }}"
+      energy_val: "{{ states(body_battery_sensor) | int(default=50) }}"
+      focus_mode: "{{ sport_focus }}"
       
-      # Vibe Logic
       mood_prompt: >-
         {% if sleep_val > 80 and energy_val > 80 %}
           energetic, vibrant, triumphant atmosphere, golden hour lighting, feeling of peak performance, highly detailed.
@@ -137,7 +135,6 @@ action:
           calm, balanced, steady, clear daylight, professional photography style, soft focus.
         {% endif %}
       
-      # Subject Logic
       activity_prompt: >-
         {% if focus_mode == 'Triathlon' %}
           A triathlete running towards a bicycle in a transition area, wearing a professional triathlon suit.
@@ -156,13 +153,11 @@ action:
       final_prompt: >-
         {{ (activity_prompt ~ " " ~ mood_prompt) | replace('\n', ' ') | replace('"', '') | trim }}
 
-  # Generate Image
   - service: shell_command.generate_gemini_image
     data:
       prompt: "{{ final_prompt }}"
       api_key: "{{ api_key }}"
 
-  # Generate Text
   - parallel:
       - delay: "00:00:15"
       - service: conversation.process
@@ -177,9 +172,7 @@ action:
             Keep it under 60 words. Be motivating but realistic.
         response_variable: gemini_response
 
-  # Send Notification (Based on Style)
   - choose:
-      # OPTION 1: Mobile App (Device Selector)
       - conditions: "{{ style == 'Mobile App' }}"
         sequence:
           - domain: mobile_app
@@ -188,11 +181,9 @@ action:
             title: "☀️ Morning Brief: {{ focus_mode }}"
             message: "{{ gemini_response.response.speech.plain.speech }}\n\n💤 Sleep: {{ sleep_val }} | 🔋 Energy: {{ energy_val }}"
             data:
-              # Append timestamp to bypass caching
               image: "/local/daily_briefing_img.jpg?t={{ now().timestamp() | int }}"
               clickAction: "/lovelace/home"
       
-      # OPTION 2: Email (Service Call)
       - conditions: "{{ style == 'Email' }}"
         sequence:
           - service: !input email_service
