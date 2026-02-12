@@ -25,7 +25,7 @@ blueprint:
       generate_gemini_image: 'python3 /config/gemini_image.py "{{ prompt }}" "{{ api_key }}"'
     ```
     
-    3.  **Google Cloud:** Your API Key must have the **Vertex AI API** enabled (Search "Vertex AI" in Google Cloud Console -> Enable).
+    3.  **Google Cloud:** Your API Key must have the **Vertex AI API** enabled.
     
     [View Full Documentation & Support](https://github.com/bradooken/ha-gemini-coach)
 
@@ -49,12 +49,24 @@ blueprint:
           mode: dropdown
       default: Mobile App
 
-    notify_service:
-      name: Notification Service
-      description: The service to use (e.g., `notify.mobile_app_pixel` OR `notify.gmail`).
+    notify_device:
+      name: Mobile Device (App Notification)
+      description: >
+        **Required if Style is 'Mobile App'.** Select the device to receive the notification.
+      default: false
+      selector:
+        device:
+          integration: mobile_app
+          multiple: false
+
+    email_service:
+      name: Email Service (Email Notification)
+      description: >
+        **Required if Style is 'Email'.** The service to use (e.g., `notify.gmail`).
+      default: notify.gmail
       selector:
         text:
-    
+
     sport_focus:
       name: Sport Focus
       description: Choose your primary sport for the coaching tip and image subject.
@@ -167,22 +179,23 @@ action:
 
   # Send Notification (Based on Style)
   - choose:
-      # OPTION 1: Mobile App
+      # OPTION 1: Mobile App (Device Selector)
       - conditions: "{{ style == 'Mobile App' }}"
         sequence:
-          - service: !input notify_service
+          - domain: mobile_app
+            type: notify
+            device_id: !input notify_device
+            title: "☀️ Morning Brief: {{ focus_mode }}"
+            message: "{{ gemini_response.response.speech.plain.speech }}\n\n💤 Sleep: {{ sleep_val }} | 🔋 Energy: {{ energy_val }}"
             data:
-              title: "☀️ Morning Brief: {{ focus_mode }}"
-              message: "{{ gemini_response.response.speech.plain.speech }}\n\n💤 Sleep: {{ sleep_val }} | 🔋 Energy: {{ energy_val }}"
-              data:
-                # Append timestamp to bypass caching
-                image: "/local/daily_briefing_img.jpg?t={{ now().timestamp() | int }}"
-                clickAction: "/lovelace/home"
+              # Append timestamp to bypass caching
+              image: "/local/daily_briefing_img.jpg?t={{ now().timestamp() | int }}"
+              clickAction: "/lovelace/home"
       
-      # OPTION 2: Email (HTML)
+      # OPTION 2: Email (Service Call)
       - conditions: "{{ style == 'Email' }}"
         sequence:
-          - service: !input notify_service
+          - service: !input email_service
             data:
               title: "💪 Morning Report: {{ focus_mode }}"
               message: HTML required.
