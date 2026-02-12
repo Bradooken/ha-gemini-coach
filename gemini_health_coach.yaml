@@ -1,19 +1,33 @@
 blueprint:
   name: "Gemini Morning Health Coach & Image Generator"
-  description: >
-    ## 🤖 AI-Powered Morning Briefing
+description: |
+    ## 🤖 Gemini AI Morning Health Coach
     
-    Generates a daily report using **Google Gemini** for text and **Imagen 3** for visuals.
+    **Turn your Garmin stats into a personalized AI morning briefing.**
     
-    **Features:**
-    * 📊 Analyzes Sleep & Body Battery scores.
-    * 🎨 Generates a custom header image based on your "Vibe" (Health stats) and "Focus" (Sport).
-    * 📱 Supports both **Rich Email** (HTML) and **Mobile App** (Native Push) notifications.
+    This blueprint uses **Google Gemini** (for coaching tips) and **Imagen 3** (for visuals) to generate a unique report based on your Sleep & Body Battery scores.
     
-    ### ⚠️ Prerequisites
-    1.  **Python Script:** You must download `gemini_image.py` from the repo and place it in `/config`.
-    2.  **Shell Command:** You must add the `shell_command` line to your `configuration.yaml`.
-    3.  **Vertex AI:** Your Google Cloud API Key must have the "Vertex AI API" enabled.
+    ### ✨ Key Features
+    * 🎨 **Dynamic Visuals:** Generates a custom 16:9 image based on your "Vibe" (Energy levels) and Sport.
+    * 🏃‍♂️ **AI Coaching:** Provides a specific, technical training tip based on your recovery metrics.
+    * 📱 **Dual Mode:** Choose between a rich **HTML Email** or a **Mobile App** push notification.
+    
+    ---
+    
+    ### ⚠️ Critical Setup Steps
+    **This blueprint requires manual setup to work.**
+    
+    1.  **Download Script:** You must place `gemini_image.py` in your `/config` folder.
+    2.  **Edit Config:** Add the following line to `configuration.yaml` and restart HA:
+    
+    ```yaml
+    shell_command:
+      generate_gemini_image: 'python3 /config/gemini_image.py "{{ prompt }}" "{{ api_key }}"'
+    ```
+    
+    3.  **Google Cloud:** Your API Key must have the **Vertex AI API** enabled (Search "Vertex AI" in Google Cloud Console -> Enable).
+    
+    [View Full Documentation & Support](https://github.com/bradooken/ha-gemini-coach)
     
   domain: automation
   input:
